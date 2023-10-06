@@ -3,6 +3,8 @@ from scipy.spatial import KDTree
 from calibration_library import *
 
 if __name__ == "__main__":
+    # parse input data to consume
+
     point = Point3D(1, 2, 3)
     rotation = Rotation3D(np.pi/4, np.pi/6, np.pi/8)
     frame = Frame3D(Point3D(10, 20, 30), rotation)
