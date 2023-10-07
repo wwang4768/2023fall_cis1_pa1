@@ -2,9 +2,63 @@ import numpy as np
 from scipy.spatial import KDTree
 from calibration_library import *
 
+
+def parseData(input_file):
+    # Initialize an empty list to store the 3D coordinates
+    points = [] 
+
+    # Open the file for reading (use 'r' before the file path to specify a raw string)
+    with open(input_file, 'r') as file:
+        # Skip the first line
+        next(file)
+
+        for line in file:
+            # Split each line into X, Y, and Z coordinates using ',' as the separator
+            x, y, z = map(float, line.strip().split(','))
+            point = (x, y, z)
+            #point = Point3D(x, y, z)
+            # Append the coordinates as a tuple to the list
+            points.append(point)
+
+    # Convert the list of tuples to a NumPy array for easier manipulation
+    point_cloud = np.array(points)
+    return point_cloud
+
+def parseCalbody(point_cloud):
+    # Number of optical markers on EM base
+    d = point_cloud[:8]
+    # number of optical markers on calibration object
+    a = point_cloud[8:16]
+    # number EM markers on calibration object
+    c = point_cloud[-27:]
+    return d, a, c
+
+def parseFrame(point_cloud, frame_chunk):
+    frames = []
+    for i in range(0, len(point_cloud), frame_chunk):
+        row = point_cloud[i:i+frame_chunk]
+        frames.append(row)
+    return frames
+
 if __name__ == "__main__":
     # parse input data to consume
+    calbody = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-calbody.txt'
+    calbody_point_cloud = parseData(calbody)
+    d0, a0, c0 = parseCalbody(calbody_point_cloud)
 
+    calreading = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-calreadings.txt'
+    calreading_point_cloud = parseData(calreading)
+    #f1, f2, f3, f4, f5, f6, f7, f8 = parseCalreading(calbody_point_cloud, 8+8+27)
+    calreading_frames = parseFrame(calreading_point_cloud, 8+8+27) # 8 frames
+
+    empivot = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-empivot.txt'
+    empivot_point_cloud = parseData(empivot)
+    empivot_frames = parseFrame(empivot_point_cloud, 6) # 12 frames
+    
+    optpivot = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-optpivot.txt'
+    optpivot_point_cloud = parseData(optpivot)
+    optpivot_frames = parseFrame(optpivot_point_cloud, 8+6) # 12 frames
+    
     point = Point3D(1, 2, 3)
     rotation = Rotation3D(np.pi/4, np.pi/6, np.pi/8)
     frame = Frame3D(Point3D(10, 20, 30), rotation)
@@ -30,7 +84,7 @@ if __name__ == "__main__":
     # Print the transformation matrix
     print("Transformation Matrix:")
     print(transformation_matrix)
-    """
+    
 
     # Generate synthetic source and target points (for demonstration purposes).
     np.random.seed(0)
@@ -43,13 +97,13 @@ if __name__ == "__main__":
                                 [0, 0, 1]])
     translation_vector = np.array([0.1, 0.2, 0.3])
     target_points = np.dot(rotation_matrix, target_points.T).T + translation_vector
-
+    """
     # Perform pivot calibration.
     registration = setRegistration()
 
     # Example usage of pivot_calibration
-    source_points = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    target_points = np.array([[2, 3, 4], [5, 6, 7], [8, 9, 10]])
+    source_points = calreading_frames[0]
+    target_points = calreading_frames[1]
 
     transformation_matrix = registration.pivot_calibration(source_points, target_points)
 
