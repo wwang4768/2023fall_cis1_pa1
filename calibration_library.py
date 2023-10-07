@@ -232,20 +232,20 @@ class Calibration:
             transformation[:] = new_transformation[:]
 
 
-        def apply_transformation(self, points, transformation):
-            """
-            Apply a 4x4 transformation matrix to a set of 3D points.
+    def apply_transformation(self, points, transformation):
+        """
+        Apply a 4x4 transformation matrix to a set of 3D points.
 
-            Args:
-                points (numpy.ndarray): 3D points to be transformed (Nx3).
-                transformation (numpy.ndarray): Transformation matrix (4x4).
+        Args:
+            points (numpy.ndarray): 3D points to be transformed (Nx3).
+            transformation (numpy.ndarray): Transformation matrix (4x4).
 
-            Returns:
-                numpy.ndarray: Transformed 3D points (Nx3).
-            """
-            homogeneous_points = np.column_stack((points, np.ones(points.shape[0])))
-            transformed_points = np.dot(transformation, homogeneous_points.T).T
-            return transformed_points[:, :3]
+        Returns:
+            numpy.ndarray: Transformed 3D points (Nx3).
+        """
+        homogeneous_points = np.column_stack((points, np.ones(points.shape[0])))
+        transformed_points = np.dot(transformation, homogeneous_points.T).T
+        return transformed_points[:, :3]
 
 # if __name__ == "__main__":
 #     point = Point3D(1, 2, 3)
