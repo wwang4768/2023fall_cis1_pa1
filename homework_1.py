@@ -49,16 +49,42 @@ if __name__ == "__main__":
     calreading = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-calreadings.txt'
     calreading_point_cloud = parseData(calreading)
     #f1, f2, f3, f4, f5, f6, f7, f8 = parseCalreading(calbody_point_cloud, 8+8+27)
-    calreading_frames = parseFrame(calreading_point_cloud, 8+8+27) # 8 frames
+
+    # stores the list of 8 frames, each of which contains data of 8 optical markers on EM base, 
+    # 8 optical markers on calibration object and 27 EM markers on calibration object
+    calreading_frames = parseFrame(calreading_point_cloud, 8+8+27) 
 
     empivot = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-empivot.txt'
     empivot_point_cloud = parseData(empivot)
-    empivot_frames = parseFrame(empivot_point_cloud, 6) # 12 frames
+    # stores the list of 12 frames, each of which contains data of 6 EM markers on probe 
+    empivot_frames = parseFrame(empivot_point_cloud, 6) 
     
     optpivot = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-optpivot.txt'
     optpivot_point_cloud = parseData(optpivot)
-    optpivot_frames = parseFrame(optpivot_point_cloud, 8+6) # 12 frames
-    
+    # stores the list of 12 frames, each of which contains data of 8 optical markers on EM base 
+    # and 6 EM markers on probe
+    optpivot_frames = parseFrame(optpivot_point_cloud, 8+6) 
+
+    # Perform pivot calibration.
+    registration = setRegistration()
+
+    # Example usage of pivot_calibration
+    source_points = calreading_frames[0]
+    target_points = calreading_frames[1]
+
+    transformation_matrix = registration.pivot_calibration(source_points, target_points)
+
+    print("Estimated Transformation:")
+    print(transformation_matrix)
+
+    transformed_points = registration.apply_transformation(source_points,transformation_matrix)
+    print(transformed_points)
+
+    #4a 
+    #source_points = calreading_frames[0]
+    #target_points = calreading_frames[1]
+
+    """
     point = Point3D(1, 2, 3)
     rotation = Rotation3D(np.pi/4, np.pi/6, np.pi/8)
     frame = Frame3D(Point3D(10, 20, 30), rotation)
@@ -70,7 +96,7 @@ if __name__ == "__main__":
     print("Frame Rotation:", frame.rotation)
     print("Frame Origin:", frame.origin)
 
-    """
+
     # Create an instance of the setRegistration class
     registration = setRegistration()
 
@@ -98,16 +124,5 @@ if __name__ == "__main__":
     translation_vector = np.array([0.1, 0.2, 0.3])
     target_points = np.dot(rotation_matrix, target_points.T).T + translation_vector
     """
-    # Perform pivot calibration.
-    registration = setRegistration()
-
-    # Example usage of pivot_calibration
-    source_points = calreading_frames[0]
-    target_points = calreading_frames[1]
-
-    transformation_matrix = registration.pivot_calibration(source_points, target_points)
-
-    print("Estimated Transformation:")
-    print(transformation_matrix)
-
+    
 
