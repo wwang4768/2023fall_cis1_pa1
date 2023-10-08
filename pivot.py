@@ -1,51 +1,65 @@
 import numpy as np
-from scipy.linalg import lstsq
 
 
-def pivot_calibration_multiple(Rj_list, Pj_list, pj_list):
+def rotation_z(theta):
+    """Return a rotation matrix for a rotation about the z-axis by theta radians."""
+    R = np.array([
+        [np.cos(theta), -np.sin(theta), 0],
+        [np.sin(theta), np.cos(theta), 0],
+        [0, 0, 1]
+    ])
+    return R
+
+
+def pivot_calibration(R_list, P_list):
     """
-    Perform pivot calibration using the least squares method for multiple frames.
+    Perform pivot calibration using the least square method.
 
     Parameters:
-    Rj_list (list of numpy.array): List of rotation matrices from sensor to probe.
-    Pj_list (list of numpy.array): List of translation vectors from sensor to probe.
-    pj_list (list of numpy.array): List of probe tip coordinates.
+    - R_list: A list of rotation matrices R_j.
+    - P_list: A list of translation vectors P_j.
 
     Returns:
-    list of tuples: Calibrated coordinates of the tip and pivot point for each frame.
+    - P_t: Position of the tip in the probe frame.
+    - P_pivot: Pivot point in the sensor frame.
     """
 
-    calibrated_results = []
+    n = len(R_list)
 
-    # Iterate through each set of transformation components and probe tip coordinates
-    for Rj, Pj, pj in zip(Rj_list, Pj_list, pj_list):
-        # Construct the linear system of equations: [Rj | I] [Pt | P_pivot]^T = pj
-        A = np.hstack((Rj, np.eye(4)))  # [Rj | I]
-        B = pj  # pj
+    A = np.zeros((3 * n, 6))
+    b = np.zeros((3 * n, 1))
 
-        # Solve the least squares problem: A * [Pt; P_pivot] = B
-        result, _, _, _ = lstsq(A, B)
+    for i in range(n):
+        R = R_list[i]
+        P = P_list[i].reshape(3, 1)
 
-        # Extract Pt and P_pivot
-        Pt = result[:4]  # Pt as a 4x1 vector
-        Ppivot = result[4:]  # P_pivot as a 4x1 vector
+        A[3 * i:3 * (i + 1), :3] = R
+        A[3 * i:3 * (i + 1), 3:] = np.eye(3)
 
-        calibrated_results.append((Pt, Ppivot))
+        b[3 * i:3 * (i + 1)] = P
 
-    return calibrated_results
+    # Use numpy's lstsq function to solve the problem
+    x, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
 
-# Example usage Replace with actual rotation matrices, translation vectors, and probe tip coordinates for each frame
-# Rj_list = [np.eye(4),  # Identity matrix np.array([[0.866, -0.5, 0, 0], [0.5, 0.866, 0, 0], [0, 0, 1, 0], [0, 0, 0,
-# 1]])]  # Example rotation matrices for each frame
-#
-# Pj_list = [np.array([0, 0, 0, 1]), np.array([1, 2, 3, 1])]  # Example translation vectors for each frame
-#
-# pj_list = [np.array([10, 20, 30, 1]), np.array([40, 50, 60, 1])]  # Example probe tip coordinates for each frame
-#
-# # Perform pivot calibration for each frame
-# calibrated_results = pivot_calibration_multiple(Rj_list, Pj_list, pj_list)
+    P_t = x[:3]
+    P_pivot = x[3:]
 
-# Print calibrated results for each frame
-# for i, (calibrated_pt, calibrated_pivot) in enumerate(calibrated_results):
-#     print(f"Calibrated Pt for frame {i+1}:", calibrated_pt)
-#     print(f"Calibrated Ppivot for frame {i+1}:", calibrated_pivot)
+    return P_t, P_pivot
+
+
+# Creating three rotation matrices for rotations of 30, 60, and 90 degrees about the z-axis
+R_list = [rotation_z(np.radians(30)), rotation_z(np.radians(60)), rotation_z(np.radians(90))]
+
+# Creating three translation vectors
+P_list = [
+    np.array([1, 2, 3]),
+    np.array([4, 5, 6]),
+    np.array([7, 8, 9])
+]
+
+# Now you can pass the R_list and P_list to the pivot_calibration function.
+P_t, P_pivot = pivot_calibration(R_list, P_list)
+print("P_t:", P_t)
+print("P_pivot:", P_pivot)
+
+
