@@ -62,14 +62,13 @@ class Frame3D:
         return transformed_point
 
 class setRegistration:
-    def icp(self, source_points, target_points, correspondences, max_iterations=100, tolerance=1e-6):
+    def icp(self, source_points, target_points, max_iterations=100, tolerance=1e-6):
         """
-        Perform 3D point set registration using the Iterative Closest Point (ICP) algorithm with known correspondences.
+        Perform 3D point set registration using the Iterative Closest Point (ICP) algorithm without known correspondences.
 
         Args:
             source_points (numpy.ndarray): Source 3D point set (Nx3).
             target_points (numpy.ndarray): Target 3D point set (Nx3).
-            correspondences (numpy.ndarray): Correspondence indices from source to target (Nx1).
             max_iterations (int): Maximum number of iterations.
             tolerance (float): Convergence tolerance (change in transformation).
 
@@ -79,12 +78,8 @@ class setRegistration:
         transformation = np.identity(4)
 
         for iteration in range(max_iterations):
-            # Use the known correspondences to select the corresponding points.
-            correspondences_source = source_points
-            correspondences_target = target_points[correspondences]
-
-            # Calculate the transformation that minimizes the distance between corresponding points.
-            transformation_update = self.compute_rigid_transform(correspondences_source, correspondences_target)
+            # Calculate the transformation that minimizes the distance between points.
+            transformation_update = self.compute_rigid_transform(source_points, target_points)
 
             # Apply the transformation to the source point set.
             source_points = self.apply_transformation(source_points, transformation_update)
@@ -97,7 +92,6 @@ class setRegistration:
                 break
 
         return transformation
-
 
     def compute_rigid_transform(self, source_points, target_points):
         """
@@ -235,6 +229,7 @@ class setRegistration:
             if np.linalg.norm(new_transformation - transformation) < tolerance:
                 break
 
+
             # Update the original transformation matrix in-place
             transformation[:] = new_transformation[:]
 
@@ -242,18 +237,28 @@ class setRegistration:
 
     def apply_transformation(self, points, transformation):
         """
-        Apply a 4x4 transformation matrix to a set of 3D points.
+        Apply a 4x4 transformation matrix to a set of 3D points and normalize the result.
 
         Args:
             points (numpy.ndarray): 3D points to be transformed (Nx3).
             transformation (numpy.ndarray): Transformation matrix (4x4).
 
         Returns:
-            numpy.ndarray: Transformed 3D points (Nx3).
+            numpy.ndarray: Normalized transformed 3D points (Nx3).
         """
-        homogeneous_points = np.column_stack((points, np.ones(points.shape[0])))
-        transformed_points = np.dot(transformation, homogeneous_points.T).T
-        return transformed_points[:, :3]
+        # Ensure points are in homogeneous coordinates (add a column of ones)
+        homogeneous_points = np.column_stack((points, np.ones((points.shape[0], 1))))
+        #print(homogeneous_points.shape)
+        
+        
+        # Perform the transformation using matrix multiplication
+        transformed_points = np.dot(homogeneous_points, transformation.T)
+
+        # Normalize the points by dividing by the last column of the result
+        normalized_points = transformed_points[:, :3] / transformed_points[:, 3, np.newaxis]
+
+        return normalized_points
+
 
 # if __name__ == "__main__":
 #     point = Point3D(1, 2, 3)
