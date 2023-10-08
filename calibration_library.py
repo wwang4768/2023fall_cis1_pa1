@@ -133,10 +133,7 @@ class setRegistration:
         transformation[:3, 3] = translation_vector
 
         return transformation
-
-import numpy as np
-
-class Calibration:
+    
     def pivot_calibration(self, source_points, target_points, max_iterations=100, tolerance=1e-6):
         """
         Perform pivot calibration to determine the transformation matrix between two point sets.
@@ -188,20 +185,21 @@ class Calibration:
 
         return error
 
-    def update_transformation(self, transformation, source_points, target_points, learning_rate=0.01):
-            """
-            Update the transformation to minimize the error metric using gradient descent.
+    def update_transformation(self, transformation, source_points, target_points, learning_rate=0.01, max_iterations=100, tolerance=1e-6):
+        """
+        Update the transformation to minimize the error metric using gradient descent.
 
-            Args:
-                transformation (numpy.ndarray): Transformation matrix (4x4) to be updated.
-                source_points (numpy.ndarray): 3D source points (Nx3).
-                target_points (numpy.ndarray): Corresponding 3D target points (Nx3).
-                learning_rate (float): Learning rate for gradient descent.
+        Args:
+            transformation (numpy.ndarray): Transformation matrix (4x4) to be updated.
+            source_points (numpy.ndarray): 3D source points (Nx3).
+            target_points (numpy.ndarray): Corresponding 3D target points (Nx3).
+            learning_rate (float): Learning rate for gradient descent.
+            max_iterations (int): Maximum number of optimization iterations.
+            tolerance (float): Convergence tolerance for stopping optimization.
+        """
+        num_points = source_points.shape[0]
 
-            Note: This implementation updates both the rotation matrix and translation vector.
-            """
-            num_points = source_points.shape[0]
-
+        for iteration in range(max_iterations):
             # Calculate the error between transformed source and target points
             transformed_source = self.apply_transformation(source_points, transformation)
             error = transformed_source - target_points
@@ -217,6 +215,11 @@ class Calibration:
                 # Gradient for translation
                 gradient_translation += 2 * error[i]
 
+            # Clip gradients to prevent numerical instability
+            max_gradient_value = 1e6  # Adjust as needed
+            gradient_rotation = np.clip(gradient_rotation, -max_gradient_value, max_gradient_value)
+            gradient_translation = np.clip(gradient_translation, -max_gradient_value, max_gradient_value)
+
             # Update the rotation matrix using gradient descent
             new_rotation_matrix = transformation[:3, :3] - learning_rate * gradient_rotation
 
@@ -228,8 +231,13 @@ class Calibration:
             new_transformation[:3, :3] = new_rotation_matrix
             new_transformation[:3, 3] = new_translation_vector
 
+            # Check for convergence based on the change in transformation
+            if np.linalg.norm(new_transformation - transformation) < tolerance:
+                break
+
             # Update the original transformation matrix in-place
             transformation[:] = new_transformation[:]
+
 
 
     def apply_transformation(self, points, transformation):
