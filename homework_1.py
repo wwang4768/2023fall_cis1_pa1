@@ -81,7 +81,7 @@ if __name__ == "__main__":
         #transformation_matrix = registration.icp(source_points_d, target_points)
         transformation_matrix = registration.calculate_3d_transformation(source_points_d, target_points)
         trans_matrix_d.append(transformation_matrix)
-    print(trans_matrix_d[0])
+    #print(trans_matrix_d[0])
 
     #4b 
     source_points_a = a0
@@ -93,7 +93,9 @@ if __name__ == "__main__":
         #transformation_matrix = registration.icp(source_points_a, target_points)
         transformation_matrix = registration.calculate_3d_transformation(source_points_d, target_points)
         trans_matrix_a.append(transformation_matrix)
-    print(trans_matrix_a[0])
+    
+    np.set_printoptions(formatter={'float': '{:.4f}'.format})
+    print(trans_matrix_a)
     """
     print("Estimated Transformation:")
     print(transformation_matrix)
@@ -107,8 +109,8 @@ if __name__ == "__main__":
     source_points_c = c0
     transformation_matrix = np.dot(np.linalg.inv(trans_matrix_d[0]), trans_matrix_a[0])
     transformed_point = registration.apply_transformation(source_points_c, transformation_matrix)
-    print(transformation_matrix)
-    print(transformed_point)
+    #print(transformation_matrix)
+    #print(transformed_point)
 
     # 4e
     translated_points = copy.deepcopy(empivot_frames)
@@ -130,7 +132,7 @@ if __name__ == "__main__":
     #print(empivot_frames[0][0], translated_points[0][0], mid_pts[0])
 
     p_tip, p_pivot = registration.pivot_calibration(trans_matrix_e)
-    print(p_pivot)
+    #print(p_pivot)
     """
     transformed_points = []
     for i in range(len(source_points)):

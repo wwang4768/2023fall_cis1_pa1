@@ -61,6 +61,55 @@ class Frame3D:
         return transformed_point
 
 class setRegistration:
+    def calculate_3d_transformation_eigen(source_points, target_points):
+        # Calculate the centroids of source_points and target_points
+        centroid_source = np.mean(source_points, axis=0)
+        centroid_target = np.mean(target_points, axis=0)
+
+        # Subtract centroids from source_points and target_points
+        source_points_hat = source_points - centroid_source
+        target_points_hat = target_points - centroid_target
+
+        # Calculate H matrix
+        H = np.dot(source_points_hat.T, target_points_hat)
+
+        # Calculate delta_T
+        delta_T = [H[1, 2] - H[2, 1], H[2, 0] - H[0, 2], H[0, 1] - H[1, 0]]
+
+        # Create G matrix
+        tmp = H + H.T - np.trace(H) * np.eye(3)
+        G = np.block([[np.trace(H), delta_T], [np.array(delta_T), tmp]])
+
+        # Compute eigenvalues and eigenvectors of G
+        eigenvalues, eigenvectors = np.linalg.eig(G)
+
+        # Find the index of the maximum eigenvalue
+        max_eigenvalue_index = np.argmax(eigenvalues)
+
+        # Get the corresponding eigenvector
+        max_eigenvector = eigenvectors[:, max_eigenvalue_index]
+
+        # Normalize the eigenvector
+        max_eigenvector /= np.linalg.norm(max_eigenvector)
+
+        # Convert the unit quaternion to a rotation matrix
+        q0, q1, q2, q3 = max_eigenvector
+        R = np.array([
+            [1 - 2 * (q2**2 + q3**2), 2 * (q1*q2 - q0*q3), 2 * (q1*q3 + q0*q2)],
+            [2 * (q1*q2 + q0*q3), 1 - 2 * (q1**2 + q3**2), 2 * (q2*q3 - q0*q1)],
+            [2 * (q1*q3 - q0*q2), 2 * (q2*q3 + q0*q1), 1 - 2 * (q1**2 + q2**2)]
+        ])
+
+        # Calculate translation vector
+        p = centroid_target - np.dot(R, centroid_source)
+
+        # Construct the transformation matrix
+        transformation_matrix = np.eye(4)
+        transformation_matrix[:3, :3] = R
+        transformation_matrix[:3, 3] = p
+
+        return transformation_matrix
+
     def calculate_3d_transformation(self, source_points, target_points):
         """
         Calculate the 4x4 transformation matrix using quaternions for 3D rigid body transformation.
