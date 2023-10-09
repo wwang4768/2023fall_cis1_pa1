@@ -61,6 +61,47 @@ class Frame3D:
         return transformed_point
 
 class setRegistration:
+    def calculate_3d_transformation(self, source_points, target_points):
+        """
+        Calculate the 4x4 transformation matrix using quaternions for 3D rigid body transformation.
+
+        Args:
+            source_points (numpy.ndarray): Source 3D point set (Nx3).
+            target_points (numpy.ndarray): Target 3D point set (Nx3).
+
+        Returns:
+            numpy.ndarray: The 4x4 transformation matrix.
+        """
+        # Compute the centroids of source and target points
+        source_centroid = np.mean(source_points, axis=0)
+        target_centroid = np.mean(target_points, axis=0)
+
+        # Center the points by subtracting centroids
+        centered_source = source_points - source_centroid
+        centered_target = target_points - target_centroid
+
+        # Compute the covariance matrix
+        H = np.dot(centered_source.T, centered_target)
+
+        # Use singular value decomposition (SVD) to find rotation matrix R
+        U, _, Vt = np.linalg.svd(H)
+        R = np.dot(Vt.T, U.T)
+
+        # Ensure proper rotation (handle reflections)
+        if np.linalg.det(R) < 0:
+            Vt[-1, :] *= -1
+            R = np.dot(Vt.T, U.T)
+
+        # Calculate translation vector t
+        t = target_centroid - np.dot(R, source_centroid)
+
+        # Create a 4x4 transformation matrix
+        transformation_matrix = np.identity(4)
+        transformation_matrix[:3, :3] = R
+        transformation_matrix[:3, 3] = t
+
+        return transformation_matrix
+
     def icp(self, source_points, target_points, max_iterations=100, tolerance=1e-6):
         """
         Perform 3D point set registration using the Iterative Closest Point (ICP) algorithm without known correspondences.
@@ -202,8 +243,6 @@ class setRegistration:
             # Update the original transformation matrix in-place
             transformation[:] = new_transformation[:]
 
-
-
     def apply_transformation(self, points, transformation):
         """
         Apply a 4x4 transformation matrix to a set of 3D points and normalize the result.
@@ -219,7 +258,6 @@ class setRegistration:
         homogeneous_points = np.column_stack((points, np.ones((points.shape[0], 1))))
         #print(homogeneous_points.shape)
         
-        
         # Perform the transformation using matrix multiplication
         transformed_points = np.dot(homogeneous_points, transformation.T)
 
@@ -228,45 +266,45 @@ class setRegistration:
 
         return normalized_points
 
-    def pivot_calibration(transformation_matrices):
+    def pivot_calibration(self, transformation_matrices):
         # Convert transformation_matrices to numpy array
         transformation_matrices = np.array(transformation_matrices)
 
-        # Number of frames - 12
+        # Number of frames
         num_frames = len(transformation_matrices)
 
         # Initialize parameters (p_tip/p_pivot) with an initial guess
-        initial_guess = np.zeros(3)
+        # 3 for p_tip and 3 for p_pivot
+        initial_guess = np.zeros(6)
 
         # Define the objective function for the least squares optimization
         def objective_function(parameters):
-            p_tip_p_pivot = parameters.reshape(3, 1)
+            p_tip = parameters[:3].reshape(3, 1)
+            p_pivot = parameters[3:].reshape(3, 1)
+
             # Create an empty array to store the transformed measurements
-            transformed_frames = np.zeros_like(transformation_matrices)
+            transformed_frames = np.zeros((num_frames, 3))
 
-            # Iterate through each frame and apply the transformation
+            # Iterate through each frame
             for j in range(num_frames):
-                T_j = transformation_matrices[j]  # Transformation matrix for frame j
-                # Apply the transformation [R_j * I] * {p_tip / p_pivot}
-                transformed_frames[j] = np.dot(T_j, np.append(p_tip_p_pivot, 1))[:3]
+                R_j = transformation_matrices[j, :3, :3]
+                error_matrix = np.hstack([R_j, -np.eye(3)])
+                concatenated_points = np.vstack([p_tip, p_pivot])
+                transformed_frames[j] = np.dot(error_matrix, concatenated_points).flatten()
 
-            # Calculate the error as the difference between transformed and measured values
-            error = transformed_frames - transformation_matrices[:, :3, 3]
+            # Calculate the error as the difference between transformed and -p_j
+            error = transformed_frames + transformation_matrices[:, :3, 3]
 
             return error.flatten()
 
         # Perform the least squares optimization to find the parameters
         result = least_squares(objective_function, initial_guess)
 
-        # Extract the solution (p_tip/p_pivot)
-        p_tip_p_pivot_solution = result.x
+        # Extract the solution for p_tip and p_pivot
+        p_tip_solution = result.x[:3]
+        p_pivot_solution = result.x[3:]
 
-        # Separate p_tip and p_pivot
-        p_pivot = p_tip_p_pivot_solution[:3]
-        p_tip = p_tip_p_pivot_solution[3:]
-
-        return p_pivot, p_tip
-
+        return p_tip_solution, p_pivot_solution
 
 # if __name__ == "__main__":
 #     point = Point3D(1, 2, 3)

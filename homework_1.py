@@ -50,7 +50,6 @@ if __name__ == "__main__":
     calreading = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-a-calreadings.txt'
     calreading_point_cloud = parseData(calreading)
     #f1, f2, f3, f4, f5, f6, f7, f8 = parseCalreading(calbody_point_cloud, 8+8+27)
-
     
     # stores the list of 8 frames, each of which contains data of 8 optical markers on EM base, 
     # 8 optical markers on calibration object and 27 EM markers on calibration object
@@ -72,46 +71,44 @@ if __name__ == "__main__":
     registration = setRegistration()
 
     #4a 
-    source_points = d0
+    source_points_d = d0
+    # print(source_points_d)
     trans_matrix_d = []
+    target_points = []
 
     for i in range(8):
         target_points = calreading_frames[i][:8]
-        transformation_matrix = registration.icp(source_points, target_points)
+        #transformation_matrix = registration.icp(source_points_d, target_points)
+        transformation_matrix = registration.calculate_3d_transformation(source_points_d, target_points)
         trans_matrix_d.append(transformation_matrix)
-
-        """
-        print("Estimated Transformation:")
-        print(transformation_matrix)
-        transformed_points = registration.apply_transformation(source_points,transformation_matrix)
-        if(transformed_points.all() == target_points.all()):
-            print("true")
-        """
+    print(trans_matrix_d[0])
 
     #4b 
-    source_points = a0
+    source_points_a = a0
     trans_matrix_a = []
+    target_points = []
 
     for i in range(8):
         target_points = calreading_frames[i][8:16]
-        transformation_matrix = registration.icp(source_points, target_points)
+        #transformation_matrix = registration.icp(source_points_a, target_points)
+        transformation_matrix = registration.calculate_3d_transformation(source_points_d, target_points)
         trans_matrix_a.append(transformation_matrix)
+    print(trans_matrix_a[0])
+    """
+    print("Estimated Transformation:")
+    print(transformation_matrix)
 
-        """
-        print("Estimated Transformation:")
-        print(transformation_matrix)
-
-        transformed_points = registration.apply_transformation(source_points,transformation_matrix)
-        if(transformed_points.all() == target_points.all()):
-            print("true")
-        """
+    transformed_points = registration.apply_transformation(source_points,transformation_matrix)
+    if(transformed_points.all() == target_points.all()):
+        print("true")
+    """
 
     # 4d
-    source_points = c0
+    source_points_c = c0
     transformation_matrix = np.dot(np.linalg.inv(trans_matrix_d[0]), trans_matrix_a[0])
-
-    transformed_point = registration.apply_transformation(source_points, transformation_matrix)
-    # print(transformed_point)
+    transformed_point = registration.apply_transformation(source_points_c, transformation_matrix)
+    print(transformation_matrix)
+    print(transformed_point)
 
     # 4e
     translated_points = copy.deepcopy(empivot_frames)
@@ -132,7 +129,8 @@ if __name__ == "__main__":
     # print(trans_matrix_e)
     #print(empivot_frames[0][0], translated_points[0][0], mid_pts[0])
 
-    p_pivot, p_tip = registration.pivot_calibration(trans_matrix_e)
+    p_tip, p_pivot = registration.pivot_calibration(trans_matrix_e)
+    print(p_pivot)
     """
     transformed_points = []
     for i in range(len(source_points)):
