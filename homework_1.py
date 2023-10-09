@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial import KDTree
 from calibration_library import *
+import copy
 
 
 def parseData(input_file):
@@ -54,12 +55,12 @@ if __name__ == "__main__":
     # stores the list of 8 frames, each of which contains data of 8 optical markers on EM base, 
     # 8 optical markers on calibration object and 27 EM markers on calibration object
     calreading_frames = parseFrame(calreading_point_cloud, 8+8+27) 
-    """
+    
     empivot = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-a-empivot.txt'
     empivot_point_cloud = parseData(empivot)
     # stores the list of 12 frames, each of which contains data of 6 EM markers on probe 
     empivot_frames = parseFrame(empivot_point_cloud, 6) 
-    
+    """
     optpivot = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-optpivot.txt'
     optpivot_point_cloud = parseData(optpivot)
     # stores the list of 12 frames, each of which contains data of 8 optical markers on EM base 
@@ -105,12 +106,33 @@ if __name__ == "__main__":
             print("true")
         """
 
-    # 4c
+    # 4d
     source_points = c0
     transformation_matrix = np.dot(np.linalg.inv(trans_matrix_d[0]), trans_matrix_a[0])
 
     transformed_point = registration.apply_transformation(source_points, transformation_matrix)
-    print(transformed_point)
+    # print(transformed_point)
+
+    # 4e
+    translated_points = copy.deepcopy(empivot_frames)
+    mid_pts = np.mean(empivot_frames, axis=1)
+    trans_matrix_e = []
+
+    for i in range(12):
+        for j in range(6):
+        # list of all mid points 
+            p = empivot_frames[i][j] - mid_pts[i]
+            translated_points[i][j] = p
+    
+    for i in range(12):
+        source_points = empivot_frames[i]
+        target_points = translated_points[i]
+        transformation_matrix = registration.icp(source_points, target_points)
+        trans_matrix_e.append(transformation_matrix)
+    # print(trans_matrix_e)
+    #print(empivot_frames[0][0], translated_points[0][0], mid_pts[0])
+
+    p_pivot, p_tip = registration.pivot_calibration(trans_matrix_e)
     """
     transformed_points = []
     for i in range(len(source_points)):
