@@ -43,11 +43,14 @@ def parseFrame(point_cloud, frame_chunk):
 
 if __name__ == "__main__":
     # parse input data to consume
-    calbody = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-b-calbody.txt'
+    base_path = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-' 
+    choose_set = 'g'
+
+    calbody = base_path + choose_set + '-calbody.txt'
     calbody_point_cloud = parseData(calbody)
     d0, a0, c0 = parseCalbody(calbody_point_cloud)
 
-    calreading = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-b-calreadings.txt'
+    calreading = base_path + choose_set + '-calreadings.txt'
     calreading_point_cloud = parseData(calreading)
     #f1, f2, f3, f4, f5, f6, f7, f8 = parseCalreading(calbody_point_cloud, 8+8+27)
     
@@ -55,12 +58,12 @@ if __name__ == "__main__":
     # 8 optical markers on calibration object and 27 EM markers on calibration object
     calreading_frames = parseFrame(calreading_point_cloud, 8+8+27) 
     
-    empivot = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-a-empivot.txt'
+    empivot = base_path + choose_set + '-empivot.txt'
     empivot_point_cloud = parseData(empivot)
     # stores the list of 12 frames, each of which contains data of 6 EM markers on probe 
     empivot_frames = parseFrame(empivot_point_cloud, 6) 
     """
-    optpivot = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1-debug-a-optpivot.txt'
+    optpivot = '-optpivot.txt'
     optpivot_point_cloud = parseData(optpivot)
     # stores the list of 12 frames, each of which contains data of 8 optical markers on EM base 
     # and 6 EM markers on probe
@@ -94,7 +97,7 @@ if __name__ == "__main__":
         transformation_matrix = registration.calculate_3d_transformation(source_points_a, target_points)
         trans_matrix_a.append(transformation_matrix)
     
-    np.set_printoptions(formatter={'float': '{:.4f}'.format})
+    np.set_printoptions(formatter={'float': '{:.2f}'.format})
     #print(trans_matrix_a)
     """
     print("Estimated Transformation:")
@@ -110,26 +113,29 @@ if __name__ == "__main__":
     transformation_matrix = np.dot(np.linalg.inv(trans_matrix_d[0]), trans_matrix_a[0])
     transformed_point = registration.apply_transformation(source_points_c, transformation_matrix)
     #print(transformation_matrix)
-    print(transformed_point)
+    #print(transformed_point)
 
     # 4e
+    # Initalize the set for gj = Gj - G0
     translated_points = copy.deepcopy(empivot_frames)
+    # Find centroid of Gj (the original position of 6 EM markers on the probe)
     mid_pts = np.mean(empivot_frames, axis=1)
+    # Find transformation matrix for 12 frames
     trans_matrix_e = []
 
     for i in range(12):
         for j in range(6):
-        # list of all mid points 
+        # fill out gj 
             p = empivot_frames[i][j] - mid_pts[i]
             translated_points[i][j] = p
     
+    # fix gj as the original starting positions
+    source_points = translated_points[0]
     for i in range(12):
-        source_points = empivot_frames[i]
-        target_points = translated_points[i]
-        transformation_matrix = registration.icp(source_points, target_points)
+        target_points = empivot_frames[i]
+        transformation_matrix = registration.calculate_3d_transformation(source_points, target_points)
         trans_matrix_e.append(transformation_matrix)
-    # print(trans_matrix_e)
-    #print(empivot_frames[0][0], translated_points[0][0], mid_pts[0])
+    #print(trans_matrix_e)
 
     p_tip, p_pivot = registration.pivot_calibration(trans_matrix_e)
     print(p_pivot)
