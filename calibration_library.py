@@ -124,10 +124,12 @@ class setRegistration:
         # Compute the centroids of source and target points
         source_centroid = np.mean(source_points, axis=0)
         target_centroid = np.mean(target_points, axis=0)
+        # print(source_centroid, target_centroid)
 
         # Center the points by subtracting centroids
         centered_source = source_points - source_centroid
         centered_target = target_points - target_centroid
+        # print(centered_source, centered_target)
 
         # Compute the covariance matrix
         H = np.dot(centered_source.T, centered_target)
@@ -143,11 +145,22 @@ class setRegistration:
 
         # Calculate translation vector t
         t = target_centroid - np.dot(R, source_centroid)
+        # t = target_points[5] - np.dot(R, source_points[5])
+
+        # Non-rigid body translation 
+        # total_translation = np.zeros(3)
+        # for i in range(len(source_points)):
+        #     translation = target_points[i] - np.dot(R, source_points[i])
+        #     print(translation)
+        #     total_translation += translation
+        # average_translation = total_translation / len(source_points)
+        # print(average_translation)
 
         # Create a 4x4 transformation matrix
         transformation_matrix = np.identity(4)
         transformation_matrix[:3, :3] = R
         transformation_matrix[:3, 3] = t
+        #transformation_matrix[:3, 3] = average_translation
 
         return transformation_matrix
 

@@ -43,11 +43,11 @@ def parseFrame(point_cloud, frame_chunk):
 
 if __name__ == "__main__":
     # parse input data to consume
-    calbody = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-a-calbody.txt'
+    calbody = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-b-calbody.txt'
     calbody_point_cloud = parseData(calbody)
     d0, a0, c0 = parseCalbody(calbody_point_cloud)
 
-    calreading = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-a-calreadings.txt'
+    calreading = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-b-calreadings.txt'
     calreading_point_cloud = parseData(calreading)
     #f1, f2, f3, f4, f5, f6, f7, f8 = parseCalreading(calbody_point_cloud, 8+8+27)
     
@@ -91,11 +91,11 @@ if __name__ == "__main__":
     for i in range(8):
         target_points = calreading_frames[i][8:16]
         #transformation_matrix = registration.icp(source_points_a, target_points)
-        transformation_matrix = registration.calculate_3d_transformation(source_points_d, target_points)
+        transformation_matrix = registration.calculate_3d_transformation(source_points_a, target_points)
         trans_matrix_a.append(transformation_matrix)
     
     np.set_printoptions(formatter={'float': '{:.4f}'.format})
-    print(trans_matrix_a)
+    #print(trans_matrix_a)
     """
     print("Estimated Transformation:")
     print(transformation_matrix)
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     transformation_matrix = np.dot(np.linalg.inv(trans_matrix_d[0]), trans_matrix_a[0])
     transformed_point = registration.apply_transformation(source_points_c, transformation_matrix)
     #print(transformation_matrix)
-    #print(transformed_point)
+    print(transformed_point)
 
     # 4e
     translated_points = copy.deepcopy(empivot_frames)
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     #print(empivot_frames[0][0], translated_points[0][0], mid_pts[0])
 
     p_tip, p_pivot = registration.pivot_calibration(trans_matrix_e)
-    #print(p_pivot)
+    print(p_pivot)
     """
     transformed_points = []
     for i in range(len(source_points)):
