@@ -34,6 +34,33 @@ def parseCalbody(point_cloud):
     c = point_cloud[-27:]
     return d, a, c
 
+def parseOptpivot(point_cloud, len_chunk_d, len_chunk_h):
+    frames_d = []
+    frames_h = []
+
+    # Define the chunk sizes
+    chunk_size_d = len_chunk_d
+    chunk_size_h = len_chunk_h
+
+    # Initialize the chunk index and current list
+    current_list = 'D'
+    temp = []
+
+    # Iterate through all items
+    for p in point_cloud:
+        temp.append(p)
+        
+        # Check if we have reached the chunk size
+        if len(temp) == chunk_size_d and current_list == 'D':
+            frames_d.append(temp)
+            temp = []
+            current_list = 'H'
+        elif len(temp) == chunk_size_h and current_list == 'H':
+            frames_h.append(temp)
+            temp = []
+            current_list = 'D'
+    return frames_d, frames_h
+
 def parseFrame(point_cloud, frame_chunk):
     frames = []
     for i in range(0, len(point_cloud), frame_chunk):
@@ -44,7 +71,7 @@ def parseFrame(point_cloud, frame_chunk):
 if __name__ == "__main__":
     # parse input data to consume
     base_path = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-' 
-    choose_set = 'g'
+    choose_set = 'a'
 
     calbody = base_path + choose_set + '-calbody.txt'
     calbody_point_cloud = parseData(calbody)
@@ -52,7 +79,6 @@ if __name__ == "__main__":
 
     calreading = base_path + choose_set + '-calreadings.txt'
     calreading_point_cloud = parseData(calreading)
-    #f1, f2, f3, f4, f5, f6, f7, f8 = parseCalreading(calbody_point_cloud, 8+8+27)
     
     # stores the list of 8 frames, each of which contains data of 8 optical markers on EM base, 
     # 8 optical markers on calibration object and 27 EM markers on calibration object
@@ -62,13 +88,12 @@ if __name__ == "__main__":
     empivot_point_cloud = parseData(empivot)
     # stores the list of 12 frames, each of which contains data of 6 EM markers on probe 
     empivot_frames = parseFrame(empivot_point_cloud, 6) 
-    """
-    optpivot = '-optpivot.txt'
+    
+    optpivot = base_path + choose_set + '-optpivot.txt'
     optpivot_point_cloud = parseData(optpivot)
     # stores the list of 12 frames, each of which contains data of 8 optical markers on EM base 
     # and 6 EM markers on probe
-    optpivot_frames = parseFrame(optpivot_point_cloud, 8+6) 
-    """
+    optpivot_em_frames, optpivot_opt_frames = parseOptpivot(optpivot_point_cloud, 8, 6) 
     
     # Perform pivot calibration.
     registration = setRegistration()
@@ -81,7 +106,6 @@ if __name__ == "__main__":
 
     for i in range(8):
         target_points = calreading_frames[i][:8]
-        #transformation_matrix = registration.icp(source_points_d, target_points)
         transformation_matrix = registration.calculate_3d_transformation(source_points_d, target_points)
         trans_matrix_d.append(transformation_matrix)
     #print(trans_matrix_d[0])
@@ -93,7 +117,6 @@ if __name__ == "__main__":
 
     for i in range(8):
         target_points = calreading_frames[i][8:16]
-        #transformation_matrix = registration.icp(source_points_a, target_points)
         transformation_matrix = registration.calculate_3d_transformation(source_points_a, target_points)
         trans_matrix_a.append(transformation_matrix)
     
@@ -138,6 +161,46 @@ if __name__ == "__main__":
     #print(trans_matrix_e)
 
     p_tip, p_pivot = registration.pivot_calibration(trans_matrix_e)
+    #print(p_pivot)
+
+    # 4f
+    # Initalize the set for gj = Gj - G0
+    translated_points = copy.deepcopy(optpivot_opt_frames)
+    transformed_translated_points = []
+    # Find centroid of Gj (the original position of 6 EM markers on the probe)
+    mid_pts = np.mean(optpivot_opt_frames, axis=1)
+    # Find transformation matrix for 12 frames
+    trans_matrix_f = []
+
+    # Calculate Fd
+    source_points_d = d0
+    transformation_matrix_Fd = []
+    target_points = []
+
+    for i in range(12):
+        target_points = optpivot_em_frames[i]
+        transformation_matrix = registration.calculate_3d_transformation(source_points_d, target_points)
+        transformation_matrix_Fd.append(transformation_matrix)
+
+    for i in range(12):
+        for j in range(6):
+        # fill out gj 
+            p = optpivot_opt_frames[i][j] - mid_pts[i]
+            translated_points[i][j] = p
+    
+    for chunk in translated_points:
+        chunk_array = np.vstack(chunk)
+        transformed_chunk = registration.apply_transformation(chunk_array, transformation_matrix_Fd[0])
+        transformed_translated_points.append(transformed_chunk)
+
+    # fix gj as the original starting positions
+    source_points = translated_points[0]
+    for i in range(12):
+        target_points = optpivot_opt_frames[i]
+        transformation_matrix = registration.calculate_3d_transformation(source_points, target_points)
+        trans_matrix_f.append(transformation_matrix)
+
+    p_tip, p_pivot = registration.pivot_calibration(trans_matrix_f)
     print(p_pivot)
     """
     transformed_points = []
