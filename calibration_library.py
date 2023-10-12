@@ -328,41 +328,32 @@ class setRegistration:
 
         return normalized_points
 
+    def optimization_heuristics(self, parameters, transformation_matrices):
+        p_tip = parameters[:3].reshape(3, 1)
+        p_pivot = parameters[3:].reshape(3, 1)
+
+        num_frames = len(transformation_matrices)
+        transformed_frames = np.zeros((num_frames, 3))
+
+        for j in range(num_frames):
+            R_j = transformation_matrices[j, :3, :3]
+            error_matrix = np.hstack([R_j, -np.eye(3)])
+            concatenated_points = np.vstack([p_tip, p_pivot])
+            transformed_frames[j] = np.dot(error_matrix, concatenated_points).flatten()
+         # Calculate the error as the difference between transformed and -p_j
+        error = transformed_frames + transformation_matrices[:, :3, 3]
+        return error.flatten()
+
     def pivot_calibration(self, transformation_matrices):
         # Convert transformation_matrices to numpy array
         transformation_matrices = np.array(transformation_matrices)
-
-        # Number of frames
         num_frames = len(transformation_matrices)
-
         # Initialize parameters (p_tip/p_pivot) with an initial guess
         # 3 for p_tip and 3 for p_pivot
         initial_guess = np.zeros(6)
-
-        # Define the objective function for the least squares optimization
-        def objective_function(parameters):
-            p_tip = parameters[:3].reshape(3, 1)
-            p_pivot = parameters[3:].reshape(3, 1)
-
-            # Create an empty array to store the transformed measurements
-            transformed_frames = np.zeros((num_frames, 3))
-
-            # Iterate through each frame
-            for j in range(num_frames):
-                R_j = transformation_matrices[j, :3, :3]
-                error_matrix = np.hstack([R_j, -np.eye(3)])
-                concatenated_points = np.vstack([p_tip, p_pivot])
-                transformed_frames[j] = np.dot(error_matrix, concatenated_points).flatten()
-
-            # Calculate the error as the difference between transformed and -p_j
-            error = transformed_frames + transformation_matrices[:, :3, 3]
-
-            return error.flatten()
-
         # Perform the least squares optimization to find the parameters
-        result = least_squares(objective_function, initial_guess)
+        result = least_squares(self.optimization_heuristics, initial_guess, args=(transformation_matrices,))
 
-        # Extract the solution for p_tip and p_pivot
         p_tip_solution = result.x[:3]
         p_pivot_solution = result.x[3:]
 
@@ -381,32 +372,3 @@ class setRegistration:
 #     print("Frame Origin:", frame.origin)
 
 
-# def pivot_calibration(self, source_points, target_points, max_iterations=100, tolerance=1e-6):
-#         """
-#         Perform pivot calibration to determine the transformation matrix between two point sets.
-
-#         Args:
-#             source_points (numpy.ndarray): 3D source points (Nx3).
-#             target_points (numpy.ndarray): Corresponding 3D target points (Nx3).
-#             max_iterations (int): Maximum number of iterations.
-#             tolerance (float): Convergence tolerance (change in transformation).
-
-#         Returns:
-#             numpy.ndarray: Transformation matrix (4x4) that aligns the source points with the target points.
-#         """
-#         transformation = np.identity(4)
-#         prev_error = float('inf')
-
-#         for iteration in range(max_iterations):
-#             # Calculate the transformation error metric using the current transformation
-#             error = self.compute_error(source_points, target_points, transformation)
-
-#             if abs(prev_error - error) < tolerance:
-#                 break  # Convergence criteria met
-
-#             # Optimize the transformation to minimize the error metric
-#             self.update_transformation(transformation, source_points, target_points)
-
-#             prev_error = error
-
-#         return transformation
