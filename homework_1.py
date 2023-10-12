@@ -3,12 +3,14 @@ from calibration_library import *
 from dataParsing_library import *
 import copy
 import os
+import re
 
 def main(): 
     # Read in input dataset
     script_directory = os.path.dirname(__file__)
-    choose_set = 'a'
-    base_path = os.path.join(script_directory, 'pa1_student_data\\PA1 Student Data\\pa1-debug-')
+    choose_set = 'k'
+    #base_path = os.path.join(script_directory, 'pa1_student_data\\PA1 Student Data\\pa1-debug-')
+    base_path = os.path.join(script_directory, 'pa1_student_data\\PA1 Student Data\\pa1-unknown-')
 
     calbody = base_path + choose_set + '-calbody.txt'
     calbody_point_cloud = parseData(calbody)
@@ -80,8 +82,7 @@ def main():
         target_points = empivot_frames[i]
         transformation_matrix = registration.calculate_3d_transformation(source_points, target_points)
         trans_matrix_FG.append(transformation_matrix)
-    p_tip, p_pivot = registration.pivot_calibration(trans_matrix_FG)
-    print(p_pivot)
+    p_tip_G, p_pivot_G = registration.pivot_calibration(trans_matrix_FG)
 
     # Q6
     # Initalize the set for gj = Gj - G0
@@ -122,8 +123,27 @@ def main():
         target_points = H_prime[i]
         transformation_matrix = registration.calculate_3d_transformation(source_points, target_points)
         trans_matrix_f.append(transformation_matrix)
-    p_tip, p_pivot = registration.pivot_calibration(trans_matrix_f)
-    print(p_pivot)
+    p_tip_H, p_pivot_H = registration.pivot_calibration(trans_matrix_f)
+
+    # format output
+    output_name = 'pa1-unknown-' + choose_set + '-output.txt'
+    input = str(p_pivot_G) + str(p_pivot_H) + str(transformed_point)
+    lines = input.strip().split("\n")
+    converted_lines = []
+
+    for line in lines:
+        numbers = re.findall(r"[-+]?\d*\.\d+|\d+", line)
+        groups_of_three = [numbers[i:i + 3] for i in range(0, len(numbers), 3)]
+        formatted_groups = [", ".join([f"{float(num):7.2f}" for num in group]) for group in groups_of_three]
+        converted_lines.extend(formatted_groups)
+    output_string = "\n".join(converted_lines)
+
+
+    # write to output
+    with open(output_name, "w") as file:
+        file.write('27, 8, ' + output_name + '\n')
+        file.write(output_string)
+
 
 if __name__ == "__main__":
     main()
