@@ -193,6 +193,7 @@ if __name__ == "__main__":
         transformed_chunk = registration.apply_transformation(chunk_array, transformation_matrix_Fd[0])
         transformed_translated_points.append(transformed_chunk)
     """
+    #apply Fd to H
     for i in range(12):
         chunk_array = np.vstack(optpivot_opt_frames[i])
         transformed_chunk = registration.apply_transformation(chunk_array, transformation_matrix_Fd[i])
@@ -201,6 +202,7 @@ if __name__ == "__main__":
     # fix gj as the original starting positions
     # source_points = translated_points[0]
     source_points = translated_points[0]
+    # source_points = registration.apply_transformation(np.vstack(translated_points[0]), transformation_matrix_Fd[0])
     for i in range(12):
         target_points = H_prime[i]
         transformation_matrix = registration.calculate_3d_transformation(source_points, target_points)
