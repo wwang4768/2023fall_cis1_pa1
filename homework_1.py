@@ -71,7 +71,7 @@ def parseFrame(point_cloud, frame_chunk):
 if __name__ == "__main__":
     # parse input data to consume
     base_path = 'C:\\Users\\Esther Wang\\Documents\\2023_CS655_CIS1\\2023fall_cis1\\pa1_student_data\\PA1 Student Data\\pa1-debug-' 
-    choose_set = 'a'
+    choose_set = 'e'
 
     calbody = base_path + choose_set + '-calbody.txt'
     calbody_point_cloud = parseData(calbody)
@@ -173,13 +173,17 @@ if __name__ == "__main__":
     trans_matrix_f = []
 
     # Calculate Fd
-    source_points_d = optpivot_em_frames[0]
+    source_points_d = d0 #optpivot_em_frames[0]
     transformation_matrix_Fd = []
     target_points = []
 
     for i in range(12):
         target_points = optpivot_em_frames[i]
         transformation_matrix = registration.calculate_3d_transformation(source_points_d, target_points)
+
+        transformation_matrix = np.linalg.inv(transformation_matrix)
+        print(transformation_matrix)
+
         transformation_matrix_Fd.append(transformation_matrix)
 
     for i in range(12):
@@ -198,16 +202,22 @@ if __name__ == "__main__":
         chunk_array = np.vstack(optpivot_opt_frames[i])
         transformed_chunk = registration.apply_transformation(chunk_array, transformation_matrix_Fd[i])
         H_prime.append(transformed_chunk)
+    
+    # temp = copy.deepcopy(H_prime[0])
+    # mid = np.mean(temp, axis=0)
+    # print(temp, mid)
+    # for i in range(6):
+    #     # fill out gj 
+    #         temp[i] = temp[i] - mid
+    # print(temp)
 
     # fix gj as the original starting positions
-    # source_points = translated_points[0]
     source_points = translated_points[0]
-    # source_points = registration.apply_transformation(np.vstack(translated_points[0]), transformation_matrix_Fd[0])
+    # source_points = temp
     for i in range(12):
         target_points = H_prime[i]
         transformation_matrix = registration.calculate_3d_transformation(source_points, target_points)
         trans_matrix_f.append(transformation_matrix)
-
     p_tip, p_pivot = registration.pivot_calibration(trans_matrix_f)
     print(p_pivot)
     
