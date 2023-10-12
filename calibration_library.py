@@ -61,55 +61,6 @@ class Frame3D:
         return transformed_point
 
 class setRegistration:
-    def calculate_3d_transformation_eigen(source_points, target_points):
-        # Calculate the centroids of source_points and target_points
-        centroid_source = np.mean(source_points, axis=0)
-        centroid_target = np.mean(target_points, axis=0)
-
-        # Subtract centroids from source_points and target_points
-        source_points_hat = source_points - centroid_source
-        target_points_hat = target_points - centroid_target
-
-        # Calculate H matrix
-        H = np.dot(source_points_hat.T, target_points_hat)
-
-        # Calculate delta_T
-        delta_T = [H[1, 2] - H[2, 1], H[2, 0] - H[0, 2], H[0, 1] - H[1, 0]]
-
-        # Create G matrix
-        tmp = H + H.T - np.trace(H) * np.eye(3)
-        G = np.block([[np.trace(H), delta_T], [np.array(delta_T), tmp]])
-
-        # Compute eigenvalues and eigenvectors of G
-        eigenvalues, eigenvectors = np.linalg.eig(G)
-
-        # Find the index of the maximum eigenvalue
-        max_eigenvalue_index = np.argmax(eigenvalues)
-
-        # Get the corresponding eigenvector
-        max_eigenvector = eigenvectors[:, max_eigenvalue_index]
-
-        # Normalize the eigenvector
-        max_eigenvector /= np.linalg.norm(max_eigenvector)
-
-        # Convert the unit quaternion to a rotation matrix
-        q0, q1, q2, q3 = max_eigenvector
-        R = np.array([
-            [1 - 2 * (q2**2 + q3**2), 2 * (q1*q2 - q0*q3), 2 * (q1*q3 + q0*q2)],
-            [2 * (q1*q2 + q0*q3), 1 - 2 * (q1**2 + q3**2), 2 * (q2*q3 - q0*q1)],
-            [2 * (q1*q3 - q0*q2), 2 * (q2*q3 + q0*q1), 1 - 2 * (q1**2 + q2**2)]
-        ])
-
-        # Calculate translation vector
-        p = centroid_target - np.dot(R, centroid_source)
-
-        # Construct the transformation matrix
-        transformation_matrix = np.eye(4)
-        transformation_matrix[:3, :3] = R
-        transformation_matrix[:3, 3] = p
-
-        return transformation_matrix
-
     def calculate_3d_transformation(self, source_points, target_points):
         """
         Calculate the 4x4 transformation matrix using quaternions for 3D rigid body transformation.
@@ -124,12 +75,10 @@ class setRegistration:
         # Compute the centroids of source and target points
         source_centroid = np.mean(source_points, axis=0)
         target_centroid = np.mean(target_points, axis=0)
-        # print(source_centroid, target_centroid)
 
         # Center the points by subtracting centroids
         centered_source = source_points - source_centroid
         centered_target = target_points - target_centroid
-        # print(centered_source, centered_target)
 
         # Compute the covariance matrix
         H = np.dot(centered_source.T, centered_target)
@@ -138,97 +87,20 @@ class setRegistration:
         U, _, Vt = np.linalg.svd(H)
         R = np.dot(Vt.T, U.T)
 
-        # Ensure proper rotation (handle reflections)
+        # handle reflections
         if np.linalg.det(R) < 0:
             Vt[-1, :] *= -1
             R = np.dot(Vt.T, U.T)
 
-        # Calculate translation vector t
+        # translation vector 
         t = target_centroid - np.dot(R, source_centroid)
-        # t = target_points[5] - np.dot(R, source_points[5])
 
-        # Non-rigid body translation 
-        # total_translation = np.zeros(3)
-        # for i in range(len(source_points)):
-        #     translation = target_points[i] - np.dot(R, source_points[i])
-        #     print(translation)
-        #     total_translation += translation
-        # average_translation = total_translation / len(source_points)
-        # print(average_translation)
-
-        # Create a 4x4 transformation matrix
+        # transformation matrix
         transformation_matrix = np.identity(4)
         transformation_matrix[:3, :3] = R
         transformation_matrix[:3, 3] = t
-        #transformation_matrix[:3, 3] = average_translation
 
         return transformation_matrix
-
-    def icp(self, source_points, target_points, max_iterations=100, tolerance=1e-6):
-        """
-        Perform 3D point set registration using the Iterative Closest Point (ICP) algorithm without known correspondences.
-
-        Args:
-            source_points (numpy.ndarray): Source 3D point set (Nx3).
-            target_points (numpy.ndarray): Target 3D point set (Nx3).
-            max_iterations (int): Maximum number of iterations.
-            tolerance (float): Convergence tolerance (change in transformation).
-
-        Returns:
-            numpy.ndarray: The transformation matrix (4x4) that aligns the source points with the target points.
-        """
-        transformation = np.identity(4)
-
-        for iteration in range(max_iterations):
-            # Calculate the transformation that minimizes the distance between points.
-            transformation_update = self.compute_rigid_transform(source_points, target_points)
-
-            # Apply the transformation to the source point set.
-            source_points = self.apply_transformation(source_points, transformation_update)
-
-            # Update the overall transformation matrix.
-            transformation = np.dot(transformation_update, transformation)
-
-            # Check for convergence based on the change in transformation.
-            if np.linalg.norm(np.identity(4) - transformation_update) < tolerance:
-                break
-
-        return transformation
-
-    def compute_rigid_transform(self, source_points, target_points):
-        """
-        Compute the rigid transformation matrix (4x4) that aligns source points with target points.
-
-        Args:
-            source_points (numpy.ndarray): Source 3D point set (Nx3).
-            target_points (numpy.ndarray): Target 3D point set (Nx3).
-
-        Returns:
-            numpy.ndarray: The transformation matrix (4x4) that aligns the source points with the target points.
-        """
-        source_centered = source_points - np.mean(source_points, axis=0)
-        target_centered = target_points - np.mean(target_points, axis=0)
-
-        # Compute the covariance matrix.
-        covariance_matrix = np.dot(source_centered.T, target_centered)
-
-        # Compute the Singular Value Decomposition (SVD).
-        U, _, Vt = np.linalg.svd(covariance_matrix)
-
-        # Ensure proper rotation (handle reflections).
-        if np.linalg.det(np.dot(U, Vt)) < 0:
-            Vt[-1, :] *= -1
-
-        # Compute the rotation matrix and translation vector.
-        rotation_matrix = np.dot(U, Vt)
-        translation_vector = np.mean(target_points, axis=0) - np.dot(rotation_matrix, np.mean(source_points, axis=0))
-
-        # Construct the transformation matrix.
-        transformation = np.identity(4)
-        transformation[:3, :3] = rotation_matrix
-        transformation[:3, 3] = translation_vector
-
-        return transformation
 
     def compute_error(self, source_points, target_points, transformation):
         """
@@ -250,60 +122,6 @@ class setRegistration:
         error = np.sqrt(squared_distances)
 
         return error
-
-    def update_transformation(self, transformation, source_points, target_points, learning_rate=0.01, max_iterations=100, tolerance=1e-6):
-        """
-        Update the transformation to minimize the error metric using gradient descent.
-
-        Args:
-            transformation (numpy.ndarray): Transformation matrix (4x4) to be updated.
-            source_points (numpy.ndarray): 3D source points (Nx3).
-            target_points (numpy.ndarray): Corresponding 3D target points (Nx3).
-            learning_rate (float): Learning rate for gradient descent.
-            max_iterations (int): Maximum number of optimization iterations.
-            tolerance (float): Convergence tolerance for stopping optimization.
-        """
-        num_points = source_points.shape[0]
-
-        for iteration in range(max_iterations):
-            # Calculate the error between transformed source and target points
-            transformed_source = self.apply_transformation(source_points, transformation)
-            error = transformed_source - target_points
-
-            # Calculate the gradients with respect to the transformation parameters
-            gradient_rotation = np.zeros((3, 3))
-            gradient_translation = np.zeros(3)
-
-            for i in range(num_points):
-                # Gradient for rotation (using the Jacobian of the transformation)
-                gradient_rotation += 2 * np.outer(source_points[i], error[i])
-
-                # Gradient for translation
-                gradient_translation += 2 * error[i]
-
-            # Clip gradients to prevent numerical instability
-            max_gradient_value = 1e6  # Adjust as needed
-            gradient_rotation = np.clip(gradient_rotation, -max_gradient_value, max_gradient_value)
-            gradient_translation = np.clip(gradient_translation, -max_gradient_value, max_gradient_value)
-
-            # Update the rotation matrix using gradient descent
-            new_rotation_matrix = transformation[:3, :3] - learning_rate * gradient_rotation
-
-            # Update the translation vector using gradient descent
-            new_translation_vector = transformation[:3, 3] - learning_rate * gradient_translation
-
-            # Update the transformation matrix
-            new_transformation = np.identity(4)
-            new_transformation[:3, :3] = new_rotation_matrix
-            new_transformation[:3, 3] = new_translation_vector
-
-            # Check for convergence based on the change in transformation
-            if np.linalg.norm(new_transformation - transformation) < tolerance:
-                break
-
-
-            # Update the original transformation matrix in-place
-            transformation[:] = new_transformation[:]
 
     def apply_transformation(self, points, transformation):
         """
