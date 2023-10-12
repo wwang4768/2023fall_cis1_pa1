@@ -1,6 +1,7 @@
 import numpy as np
 from calibration_library import *
 from dataParsing_library import *
+from validation_test import *
 import copy
 import os
 import re
@@ -8,9 +9,9 @@ import re
 def main(): 
     # Read in input dataset
     script_directory = os.path.dirname(__file__)
-    choose_set = 'k'
-    #base_path = os.path.join(script_directory, 'pa1_student_data\\PA1 Student Data\\pa1-debug-')
-    base_path = os.path.join(script_directory, 'pa1_student_data\\PA1 Student Data\\pa1-unknown-')
+    choose_set = 'a'
+    base_path = os.path.join(script_directory, 'pa1_student_data\\PA1 Student Data\\pa1-debug-')
+    #base_path = os.path.join(script_directory, 'pa1_student_data\\PA1 Student Data\\pa1-unknown-')
 
     calbody = base_path + choose_set + '-calbody.txt'
     calbody_point_cloud = parseData(calbody)
@@ -85,10 +86,10 @@ def main():
     p_tip_G, p_pivot_G = registration.pivot_calibration(trans_matrix_FG)
 
     # Q6
-    # Initalize the set for gj = Gj - G0
+    # Initalize the set for hj = Hj - H0
     translated_points = copy.deepcopy(optpivot_opt_frames)
     H_prime = []
-    # Find centroid of Gj (the original position of 6 EM markers on the probe)
+    # Find centroid of Hj (the original position of 6 EM markers on the probe)
     midpoint = np.mean(optpivot_opt_frames, axis=1)
     # Find transformation matrix for 12 frames
     trans_matrix_f = []
@@ -106,7 +107,7 @@ def main():
 
     for i in range(12):
         for j in range(6):
-        # fill out gj 
+        # fill out hj 
             p = optpivot_opt_frames[i][j] - midpoint[i]
             translated_points[i][j] = p
     
@@ -116,7 +117,7 @@ def main():
         transformed_chunk = registration.apply_transformation(chunk_array, transformation_matrix_Fd[i])
         H_prime.append(transformed_chunk)
 
-    # fix gj as the original starting positions
+    # fix Hj as the original starting positions
     source_points = translated_points[0]
 
     for i in range(12):
@@ -144,6 +145,13 @@ def main():
         file.write('27, 8, ' + output_name + '\n')
         file.write(output_string)
 
-
 if __name__ == "__main__":
     main()
+    '''
+    v = validate()
+    file1 = 'pa1_student_data\PA1 Student Data\pa1-debug-g-output1.txt'
+    file2 = 'OUTPUT\pa1-unknown-g-output.txt'
+    
+    percentage_differences = v.calculate_error_from_sample(file1, file2, use_reference=0)
+    print(np.mean(percentage_differences))
+    '''
